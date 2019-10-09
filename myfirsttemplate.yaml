@@ -1,8 +1,16 @@
+Mappings:
+  RegionAMIMap:
+    eu-west-2:
+      AMI: ami-00a1270ce1e007c27
+    eu-west-1:
+      AMI: ami-0ce71448843cb18a1
+
 Resources:
   EC2Instance:
     Type: "AWS::EC2::Instance"
     Properties:
-      ImageId: ami-00a1270ce1e007c27
+      ImageId: 
+        !FindInMap [ RegionAMIMap, !Ref AWS::Region, AMI ]
       InstanceType: t2.micro
       SecurityGroups:
         - !Ref SecurityGroup
@@ -18,7 +26,7 @@ Resources:
           FromPort: 22
           ToPort: 22
           CidrIp: 0.0.0.0/0
-      
+
 Outputs:
   EC2Instane:
     Description: Instance ID
