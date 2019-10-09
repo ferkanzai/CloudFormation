@@ -1,3 +1,8 @@
+Parameters:
+  KeyName:
+    Description: Name of an existing EC2 KeyPair to enable SSH access into the server
+    Type: AWS::EC2::KeyPair::KeyName
+
 Mappings:
   RegionAMIMap:
     eu-west-2:
@@ -20,6 +25,7 @@ Resources:
       Tags:
         - Key: "Name"
           Value: "Instance test"
+      KeyName: !Ref KeyName
   SecurityGroup:
     Type: "AWS::EC2::SecurityGroup"
     Properties:
