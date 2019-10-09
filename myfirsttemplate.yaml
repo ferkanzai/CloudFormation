@@ -44,6 +44,9 @@ Outputs:
   EC2Instane:
     Description: Instance ID
     Value: !Ref EC2Instance
+  PublicIP:
+    Description: Public IP of the Instance
+    Value: !GetAtt EC2Instance.PublicDnsName
   SecurityGroup:
     Description: Security Group ID
     Value: !GetAtt SecurityGroup.GroupId
