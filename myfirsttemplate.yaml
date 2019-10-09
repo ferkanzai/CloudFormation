@@ -10,7 +10,10 @@ Resources:
     Type: "AWS::EC2::Instance"
     Properties:
       ImageId: 
-        !FindInMap [ RegionAMIMap, !Ref AWS::Region, AMI ]
+        Fn::FindInMap:
+        - RegionAMIMap
+        - !Ref AWS::Region
+        - AMI
       InstanceType: t2.micro
       SecurityGroups:
         - !Ref SecurityGroup
