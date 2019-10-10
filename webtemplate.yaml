@@ -5,9 +5,9 @@ Parameters:
   VpcId:
     Description: Enter the VPC ID
     Type: AWS::EC2::VPC::Id
-  SubnetId:
-    Description: Enter the Subnet ID
-    Type: AWS::EC2::Subnet::Id
+  SubnetIds:
+    Description: Enter the Subnet IDs
+    Type: List<AWS::EC2::Subnet::Id>
 
 Mappings:
   RegionAMIMap:
@@ -22,8 +22,7 @@ Resources:
     Properties:
       SecurityGroups:
         - !Ref ALBSecurityGroup
-      Subnets:
-        - !Ref SubnetId
+      Subnets: !Ref SubnetIds
   LoadBalancerListener:
     Type: "AWS::ElasticLoadBalancingV2::Listener"
     Properties:
@@ -44,7 +43,7 @@ Resources:
     Type: AWS::AutoScaling::AutoScalingGroup
     Properties:
       AvailabilityZones: !GetAZs
-      LaunchConfiguration: !Ref LaunchConfiguration
+      LaunchConfigurationName: !Ref LaunchConfiguration
       MinSize: 1
       MaxSize: 3
       TargetGroupARNs:
