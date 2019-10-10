@@ -13,6 +13,22 @@ Mappings:
 Resources:
   EC2Instance:
     Type: "AWS::EC2::Instance"
+    Metadata:
+      AWS::CloudFormation::Init:
+        config:
+          packages:
+            yum:
+              httpd: []
+              php: []
+          files:
+            /var/www/html/index.php:
+              content: !Sub |
+                <?php print "Hello world Fernando was here!"; ?>
+          services:
+            sysvinit:
+              httpd:
+                enabled: true
+                ensureRunning: true
     Properties:
       ImageId: 
         Fn::FindInMap:
@@ -26,6 +42,14 @@ Resources:
         - Key: "Name"
           Value: "Instance test"
       KeyName: !Ref KeyName
+      UserData:
+        'Fn::Base64':
+          !Sub |
+            #!/bin/bash -xe
+            # Ensure AWS CFN Bootstrap is the latest
+            yum install -y aws-cfn-bootstrap
+            # Install the files and packages from the metadata
+            /opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --resource EC2Instance --region ${AWS::Region}
   SecurityGroup:
     Type: "AWS::EC2::SecurityGroup"
     Properties:
@@ -46,10 +70,15 @@ Outputs:
     Value: !Ref EC2Instance
   ServerDNSName:
     Description: Public IP of the Instance
-    Value: !GetAtt EC2Instance.PublicDnsName
+    Value: !GetAtt 
+      - EC2Instance
+      - PublicDnsName
   SecurityGroup:
     Description: Security Group ID
     Value: !GetAtt SecurityGroup.GroupId
   VPC:
     Description: VPC ID
     Value: !GetAtt SecurityGroup.VpcId
+  Website:
+    Description: The Public DNS for the EC2 Instance
+    Value: !Sub http://${EC2Instance.PublicDnsName}
