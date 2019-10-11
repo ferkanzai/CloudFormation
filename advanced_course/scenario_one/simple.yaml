@@ -1,0 +1,29 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Wordpress CFN template'
+Resources:
+  DB:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      AllocatedStorage: 5
+      StorageType: gp2
+      DBInstanceClass: db.t2.micro
+      DBName: wordpress
+      Engine: MySQL 
+      MasterUsername: wordpress
+      MasterUserPassword: w0rdpr355
+      Tags:
+        - Key: Name
+          Value: Wordpress DB
+  EC2:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: ami-028188d9b49b32a80 # Linux 1 AMI (Oct'19) in eu-west-1
+      InstanceType: t2.micro
+      Tags:
+        - Key: Name
+          Value: Wordpress EC2
+  S3:
+    Type: AWS::S3::Bucket
+    Properties: 
+      BucketName: wp-awsfca
