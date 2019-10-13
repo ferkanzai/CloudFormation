@@ -44,7 +44,7 @@ Mappings:
       "AMALINUX": "ami-0245d318c6788de52"
     us-west-2:
       "AMALINUX": "ami-04b762b4289fba92b"
-  EnvSize:
+  InstancesSize:
     SMALL:
       "EC2": "t2.micro"
       "DB": "db.t2.micro"
@@ -58,17 +58,17 @@ Resources:
   EC2:
     Type: AWS::EC2::Instance
     Properties:
-      ImageId: ami-028188d9b49b32a80 # Linux 1 AMI (Oct'19) in eu-west-1
-      InstanceType: !FindInMap [EnvSize, !Ref EnvironmentSize, EC2]
+      ImageId: !FindInMap [RegionMap, !Ref "AWS::Region", AMALINUX]
+      InstanceType: !FindInMap [InstancesSize, !Ref EnvironmentSize, EC2]
   DB:
     Type: AWS::RDS::DBInstance
     Properties:
       AllocatedStorage: 5
       StorageType: gp2
-      DBInstanceClass: !FindInMap [EnvSize, !Ref EnvironmentSize, DB]
+      DBInstanceClass: !FindInMap [InstancesSize, !Ref EnvironmentSize, DB]
       DBName: wordpress
       Engine: MySQL
       MasterUsername: wordpress
-      MasterPassword: w0rdpr355
+      MasterUserPassword: w0rdpr355
   S3:
     Type: AWS::S3::Bucket
