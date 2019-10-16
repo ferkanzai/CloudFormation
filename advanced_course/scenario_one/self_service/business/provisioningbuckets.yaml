@@ -1,0 +1,66 @@
+Resources:
+  resbucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      AccessControl: Private
+      WebsiteConfiguration:
+        ErrorDocument: index.html
+        IndexDocument: index.html
+  selfservebucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      AccessControl: Private
+      WebsiteConfiguration:
+        ErrorDocument: index.html
+        IndexDocument: index.html
+  resbucketpolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref resbucket
+      PolicyDocument:
+        Statement:
+          -
+            Sid: "AccessFromIp"
+            Action:
+              - "s3:GetObject"
+              - "s3:ListBucket"
+            Effect: Allow
+            Resource:
+              - !Join ["", ["arn:aws:s3:::", !Ref resbucket, "/*"]]
+              - !Join ["", ["arn:aws:s3:::", !Ref resbucket]]
+            Principal:
+              AWS:
+                - "*"
+            Condition:
+              IpAddress:
+                "aws:SourceIp": 
+                  - "37.228.246.140/32"
+  selfservebucketpolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref selfservebucket
+      PolicyDocument:
+        Statement:
+          -
+            Sid: "AccessFromIp"
+            Action:
+              - "s3:GetObject"
+              - "s3:ListBucket"
+            Effect: Allow
+            Resource:
+              - !Join ["", ["arn:aws:s3:::", !Ref selfservebucket, "/*"]]
+              - !Join ["", ["arn:aws:s3:::", !Ref selfservebucket]]
+            Principal:
+              AWS:
+                - "*"
+            Condition:
+              IpAddress:
+                "aws:SourceIp": 
+                  - "37.228.246.140/32"
+Outputs:
+  resbucketurl:
+    Description: URL for Resource Bucket
+    Value: !GetAtt resbucket.WebsiteURL
+  selfservebucketURL:
+    Description: URL for Self Service Portal
+    Value: !GetAtt selfservebucket.WebsiteURL

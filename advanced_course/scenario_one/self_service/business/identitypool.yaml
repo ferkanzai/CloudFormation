@@ -1,0 +1,66 @@
+Resources:
+  CognitoIdentityPool:
+    Type: AWS::Cognito::IdentityPool
+    Properties:
+      IdentityPoolName: "WHI-IdentityPool"
+      AllowUnauthenticatedIdentities: false
+      SupportedLoginProviders: 
+        accounts.google.com:
+          "841637137655-amagm4f33rq2t1dvs586v1d0r29moijo.apps.googleusercontent.com"
+  IdentityPoolAttachment:
+    Type: AWS::Cognito::IdentityPoolRoleAttachment
+    Properties:
+      IdentityPoolId: !Ref CognitoIdentityPool
+      Roles:
+        authenticated: 
+          !GetAtt IamRole.Arn
+  IamRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          -
+            Effect: "Allow"
+            Action:
+              - "sts:AssumeRoleWithWebIdentity"
+            Condition:
+              "ForAnyValue:StringLike": 
+                "cognito-identity.amazonaws.com:amr":
+                  "authenticated"
+              "StringEquals":
+                "cognito-identity.amazonaws.com:aud": 
+                  !Ref CognitoIdentityPool
+            Principal:
+              Federated:
+                - "cognito-identity.amazonaws.com"
+      Path: "/"
+      "Policies":
+        -
+          PolicyName: main
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              -
+                Effect: "Allow"
+                Action:
+                  - "cloudformation:CreateStack"
+                  - "cloudformation:UpdateStack"
+                  - "cloudformation:DeleteStack"
+                  - "cloudformation:CreateUploadBucket"
+                  - "cloudformation:DescribeStacks"
+                  - "cloudformation:DescribeStackEvents"
+                  - "cloudformation:GetTemplateSummary"
+                  - "cloudformation:ListStacks"
+                  - "cloudformation:ListStackResources"
+                  - "s3:CreateBucket"
+                  - "s3:GetObject"
+                  - "s3:PutObject"
+                  - "mobileanalytics:PutEvent"
+                  - "cognito-sync:*"
+                  - "cognito-identity:*"
+                Resource: "*" 
+Outputs:
+  RoleArn:
+    Description: IAM role ARN
+    Value: !GetAtt IamRole.Arn
