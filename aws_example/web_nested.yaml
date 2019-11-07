@@ -117,6 +117,18 @@ Resources:
       - Ref: TargetGroup
       VPCZoneIdentifier:
         Ref: AutoScalingSubnetsIds
+      Tags:
+        - Key: Name
+          PropagateAtLaunch: true
+          Value: 
+            Fn::Join:
+            - '-'
+            - - !Sub ${AWS::StackName}
+              - ASG
+              - instance
+        - Key: auto-delete
+          PropagateAtLaunch: true
+          Value: never
   LaunchConfiguration:
     Type: AWS::AutoScaling::LaunchConfiguration
     Metadata:
