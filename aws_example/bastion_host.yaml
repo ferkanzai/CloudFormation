@@ -1,0 +1,87 @@
+# This temaplate creates a bastion host in order to connect to the web servers
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Bastion host to connect to the web server instances'
+
+Parameters:
+  KeyPair:
+    Type: AWS::EC2::KeyPair::KeyName
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+  Subnet:
+    Type: String
+
+Mappings:
+  RegionMap:
+    eu-north-1:
+      AMALINUX: ami-6a1f9414
+    ap-south-1:
+      AMALINUX: ami-02913db388613c3e1
+    eu-west-3:
+      AMALINUX: ami-0652eb0db9b20aeaf
+    eu-west-2:
+      AMALINUX: ami-04de2b60dd25fbb2e
+    eu-west-1:
+      AMALINUX: ami-028188d9b49b32a80
+    ap-northeast-2:
+      AMALINUX: ami-0e1e385b0a934254a
+    ap-northeast-1:
+      AMALINUX: ami-0ab3e16f9c414dee7
+    sa-east-1:
+      AMALINUX: ami-0e2c2c29d8017dd99
+    ca-central-1:
+      AMALINUX: ami-04070f04f450607dc
+    ap-southeast-1:
+      AMALINUX: ami-05c859630889c79c8
+    ap-southeast-2:
+      AMALINUX: ami-07cc15c3ba6f8e287
+    eu-central-1:
+      AMALINUX: ami-010fae13a16763bb4
+    us-east-1:
+      AMALINUX: ami-00eb20669e0990cb4
+    us-east-2:
+      AMALINUX: ami-0c64dd618a49aeee8
+    us-west-1:
+      AMALINUX: ami-0bce08e823ed38bdd
+    us-west-2:
+      AMALINUX: ami-08d489468314a58df
+
+Resources:
+  EC2Instance:
+    Type: "AWS::EC2::Instance"
+    Properties:
+      ImageId: 
+        Fn::FindInMap:
+        - RegionMap
+        - !Ref AWS::Region
+        - AMALINUX
+      InstanceType: t2.micro
+      SecurityGroupIds:
+        - !GetAtt SecurityGroup.GroupId
+      Tags:
+        - Key: "Name"
+          Value: "ASG Bastion"
+      KeyName: !Ref KeyPair
+      SubnetId: !Ref Subnet
+      UserData:
+        Fn::Base64:
+            #!/bin/bash
+            yum update -y
+  SecurityGroup:
+    Type: "AWS::EC2::SecurityGroup"
+    Properties:
+      GroupDescription: Enable SSH
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+
+Outputs:
+  Bastion:
+    Description: bastion DNS name
+    Value: !GetAtt EC2Instance.PublicDnsName
+  BastionSecurityGroup:
+    Description: SG of the EC2 instances
+    Value: !GetAtt SecurityGroup.GroupId

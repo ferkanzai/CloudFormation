@@ -12,6 +12,8 @@ Parameters:
     Type: CommaDelimitedList
   AutoScalingSubnetsIds:
     Type: CommaDelimitedList
+  BastionSecurityGroup:
+    Type: String
 Mappings:
   RegionMap:
     eu-north-1:
@@ -243,7 +245,7 @@ Resources:
       GroupDescription: EC2 Security Group
       VpcId:
         Ref: VpcId
-  EC2InboundRule:
+  EC2InboundRuleHTTP:
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
       IpProtocol: tcp
@@ -253,6 +255,17 @@ Resources:
         Fn::GetAtt:
         - ALBSecurityGroup
         - GroupId
+      GroupId:
+        Fn::GetAtt:
+        - EC2SecurityGroup
+        - GroupId
+  EC2InboundRuleBastion:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      IpProtocol: tcp
+      FromPort: 22
+      ToPort: 22
+      SourceSecurityGroupId: !Ref BastionSecurityGroup
       GroupId:
         Fn::GetAtt:
         - EC2SecurityGroup

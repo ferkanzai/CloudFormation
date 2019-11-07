@@ -50,7 +50,7 @@ Resources:
       TemplateURL: https://fcamytemplates.s3.amazonaws.com/VPC_nested.yaml
   WebStack:
     Type: AWS::CloudFormation::Stack
-    DependsOn: VPCStack
+    DependsOn: BastionHostStack
     Properties:
       Parameters:
         KeyPair: !Ref KeyPair
@@ -65,7 +65,16 @@ Resources:
           - ','
           - -  !GetAtt VPCStack.Outputs.PrivateSubnetAppA
             -  !GetAtt VPCStack.Outputs.PrivateSubnetAppB
+        BastionSecurityGroup: !GetAtt BastionHostStack.Outputs.BastionSecurityGroup
       TemplateURL: https://fcamytemplates.s3.amazonaws.com/web_nested.yaml
+  BastionHostStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      Parameters:
+        KeyPair: !Ref KeyPair
+        VpcId: !GetAtt VPCStack.Outputs.VpcID
+        Subnet: !GetAtt VPCStack.Outputs.PublicSubnetA
+      TemplateURL: https://fcamytemplates.s3.amazonaws.com/bastion_host.yaml
 
 Outputs:
   VPCStack:
@@ -74,3 +83,6 @@ Outputs:
   WebDNSName:
     Description: Public IP of the Load Balancer
     Value: !GetAtt WebStack.Outputs.WebDNSName
+  Bastion:
+    Description: Bastion DNS name
+    Value: !GetAtt BastionHostStack.Outputs.Bastion
