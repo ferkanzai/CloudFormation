@@ -1,0 +1,76 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Parent template for VPC and Web_v1'
+
+Parameters:
+  VpcCIDR:
+    Description: Please enter the IP range (CIDR notation) for this VPC
+    Type: String
+    Default: 10.0.0.0/16
+  PublicSubnetACIDR:
+    Description: Please enter the IP range (CIDR notation) for the public subnet in the first Availability Zone
+    Type: String
+    Default: 10.0.1.0/24
+  PublicSubnetBCIDR:
+    Description: Please enter the IP range (CIDR notation) for the public subnet in the second Availability Zone
+    Type: String
+    Default: 10.0.2.0/24
+  PrivateSubnetAppACIDR:
+    Description: Please enter the IP range (CIDR notation) for the app private subnet in the first Availability Zone
+    Type: String
+    Default: 10.0.11.0/24
+  PrivateSubnetAppBCIDR:
+    Description: Please enter the IP range (CIDR notation) for the app private subnet in the second Availability Zone
+    Type: String
+    Default: 10.0.12.0/24
+  PrivateSubnetDataACIDR:
+    Description: Please enter the IP range (CIDR notation) for the data private subnet in the first Availability Zone
+    Type: String
+    Default: 10.0.21.0/24
+  PrivateSubnetDataBCIDR:
+    Description: Please enter the IP range (CIDR notation) for the data private subnet in the second Availability Zone
+    Type: String
+    Default: 10.0.22.0/24
+  KeyPair:
+    Description: Name of an existing EC2 KeyPair to enable SSH access into the server
+    Type: AWS::EC2::KeyPair::KeyName
+
+Resources:
+  VPCStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      Parameters:
+        VpcCIDR: !Ref VpcCIDR
+        PublicSubnetACIDR: !Ref PublicSubnetACIDR
+        PublicSubnetBCIDR: !Ref PublicSubnetBCIDR
+        PrivateSubnetAppACIDR: !Ref PrivateSubnetAppACIDR
+        PrivateSubnetAppBCIDR: !Ref PrivateSubnetAppBCIDR
+        PrivateSubnetDataACIDR: !Ref PrivateSubnetDataACIDR
+        PrivateSubnetDataBCIDR: !Ref PrivateSubnetDataBCIDR
+      TemplateURL: https://fcamytemplates.s3.amazonaws.com/VPC_nested.yaml
+  WebStack:
+    Type: AWS::CloudFormation::Stack
+    DependsOn: VPCStack
+    Properties:
+      Parameters:
+        KeyPair: !Ref KeyPair
+        VpcId: !GetAtt VPCStack.Outputs.VpcID
+        LoadBalancerSubnetIds:
+          Fn::Join:
+          - ','
+          - -  !GetAtt VPCStack.Outputs.PublicSubnetA
+            -  !GetAtt VPCStack.Outputs.PublicSubnetB
+        AutoScalingSubnetsIds:
+          Fn::Join:
+          - ','
+          - -  !GetAtt VPCStack.Outputs.PrivateSubnetAppA
+            -  !GetAtt VPCStack.Outputs.PrivateSubnetAppB
+      TemplateURL: https://fcamytemplates.s3.amazonaws.com/web_nested.yaml
+
+Outputs:
+  VPCStack:
+    Value: !Ref VPCStack
+    Description: This is an outputs test
+  WebDNSName:
+    Description: Public IP of the Load Balancer
+    Value: !GetAtt WebStack.Outputs.WebDNSName

@@ -1,0 +1,256 @@
+# This temaplate creates an ALB pointing to an ASG with a really simple web page in the instances
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Web Servers with ALB and ASG'
+
+Parameters:
+  KeyPair:
+    Description: Name of an existing EC2 KeyPair to enable SSH access into the server
+    Type: AWS::EC2::KeyPair::KeyName
+  VpcId:
+    Description: Enter the VPC ID
+    Type: AWS::EC2::VPC::Id
+  LoadBalancerSubnetIds:
+    Description: Enter the Subnet IDs for the internet facing Load Balancer
+    Type: List<AWS::EC2::Subnet::Id>
+  AutoScalingSubnetsIds:
+    Description: Enter the Subnet IDs for the Auto Scaling Group
+    Type: List<AWS::EC2::Subnet::Id>
+Mappings:
+  RegionMap:
+    eu-north-1:
+      AMALINUX: ami-6a1f9414
+      AMALINUX2: ami-0c947472aff72870d
+      WINDOWS: ami-09b605f903aef31cd
+    ap-south-1:
+      AMALINUX: ami-02913db388613c3e1
+      AMALINUX2: ami-040c7ad0a93be494e
+      WINDOWS: ami-07b1360b71c3716d8
+    eu-west-3:
+      AMALINUX: ami-0652eb0db9b20aeaf
+      AMALINUX2: ami-05a51ff00c1d77571
+      WINDOWS: ami-0ba894c68b1681e24
+    eu-west-2:
+      AMALINUX: ami-04de2b60dd25fbb2e
+      AMALINUX2: ami-00e8b55a2e841be44
+      WINDOWS: ami-06ea28ca18bb79e3c
+    eu-west-1:
+      AMALINUX: ami-028188d9b49b32a80
+      AMALINUX2: ami-040ba9174949f6de4
+      WINDOWS: ami-0c143cb48fa7c1ec9
+    ap-northeast-2:
+      AMALINUX: ami-0e1e385b0a934254a
+      AMALINUX2: ami-02b3330196502d247
+      WINDOWS: ami-0fd7175b57c51b752
+    ap-northeast-1:
+      AMALINUX: ami-0ab3e16f9c414dee7
+      AMALINUX2: ami-0064e711cbc7a825e
+      WINDOWS: ami-0e48df3801c3e668e
+    sa-east-1:
+      AMALINUX: ami-0e2c2c29d8017dd99
+      AMALINUX2: ami-053f8b6627112b46e
+      WINDOWS: ami-05b2ce93b518cf8ee
+    ca-central-1:
+      AMALINUX: ami-04070f04f450607dc
+      AMALINUX2: ami-007dbcbce3118978b
+      WINDOWS: ami-0054a87febcce8612
+    ap-southeast-1:
+      AMALINUX: ami-05c859630889c79c8
+      AMALINUX2: ami-00942d7cd4f3ca5c0
+      WINDOWS: ami-00534e787c8349c76
+    ap-southeast-2:
+      AMALINUX: ami-07cc15c3ba6f8e287
+      AMALINUX2: ami-08a74056dfd30c986
+      WINDOWS: ami-0f307b7625bd712cd
+    eu-central-1:
+      AMALINUX: ami-010fae13a16763bb4
+      AMALINUX2: ami-0f3a43fbf2d3899f7
+      WINDOWS: ami-034937fd7f621ba85
+    us-east-1:
+      AMALINUX: ami-00eb20669e0990cb4
+      AMALINUX2: ami-00dc79254d0461090
+      WINDOWS: ami-0d4df21ffeb914d61
+    us-east-2:
+      AMALINUX: ami-0c64dd618a49aeee8
+      AMALINUX2: ami-00bf61217e296b409
+      WINDOWS: ami-085a6b327e41e6912
+    us-west-1:
+      AMALINUX: ami-0bce08e823ed38bdd
+      AMALINUX2: ami-024c80694b5b3e51a
+      WINDOWS: ami-05f5b1fdbdbc92ec7
+    us-west-2:
+      AMALINUX: ami-08d489468314a58df
+      AMALINUX2: ami-0a85857bfc5345c38
+      WINDOWS: ami-0bff712af642c77c9
+Resources:
+  LoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      SecurityGroups:
+      - Ref: ALBSecurityGroup
+      Subnets:
+        Ref: LoadBalancerSubnetIds
+  LoadBalancerListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+      - Type: forward
+        TargetGroupArn:
+          Ref: TargetGroup
+      LoadBalancerArn:
+        Ref: LoadBalancer
+      Port: 80
+      Protocol: HTTP
+  TargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Port: 80
+      Protocol: HTTP
+      VpcId:
+        Ref: VpcId
+  AutoScalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      LaunchConfigurationName:
+        Ref: LaunchConfiguration
+      DesiredCapacity: 2
+      MinSize: 2
+      MaxSize: 5
+      Cooldown: 15
+      TargetGroupARNs:
+      - Ref: TargetGroup
+      VPCZoneIdentifier:
+        Ref: AutoScalingSubnetsIds
+  LaunchConfiguration:
+    Type: AWS::AutoScaling::LaunchConfiguration
+    Metadata:
+      Comment: Install php and httpd
+      AWS::CloudFormation::Init:
+        configSets:
+          configuration:
+            - "configure_cfn"
+            - "install_apache"
+        configure_cfn:
+          files:
+            /etc/cfn/hooks.d/cfn-auto-reloader.conf:
+              content: !Sub |
+                [cfn-auto-reloader-hook]
+                triggers=post.update
+                path=Resources.EC2.Metadata.AWS::CloudFormation::Init
+                action=/opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --resource LaunchConfiguration --configsets configuration --region ${AWS::Region}
+              mode: "000400"
+              owner: root
+              group: root
+            /etc/cfn/cfn-hup.conf:
+              content: !Sub |
+                [main]
+                stack=${AWS::StackId}
+                region=${AWS::Region}
+                verbose=true
+                interval=5
+              mode: "000400"
+              owner: root
+              group: root
+          services:
+            sysvinit:
+              cfn-hup:
+                enabled: "true"
+                ensureRunning: "true"
+                files:
+                  - "/etc/cfn/cfn-hup.conf"
+                  - "/etc/cfn/hooks.d/cfn-auto-reloader.conf"
+        install_apache:
+          packages:
+            yum:
+              httpd: []
+              php: []
+              stress: []
+          files:
+            /var/www/html/index.php:
+              content: !Sub
+                <html>
+                <title>ALB test</title>
+                <body>
+                <center>
+                <h1>
+                <?php print "Hello world Fernando was here!"; ?> <br>
+                </h1>
+                </center>
+                <center>
+                <h2>
+                <?php $eip = file_get_contents('http://169.254.169.254/latest/meta-data/instance-id'); echo $eip; ?>
+                </h2>
+                </center>
+                </body>
+                </html>
+            /var/www/html/.htaccess:
+              content:
+                Fn::Sub: 'RewriteRule ^index\.htm$ index.php [NC,R]'
+          services:
+            sysvinit:
+              httpd:
+                enabled: true
+                ensureRunning: true
+          runcmd:
+            - [ sh, -c, "usermod -a -G apache ec2-user" ]
+            - [ sh, -c, "chown -R ec2-user:apache /var/www" ]
+            - chmod 2775 /var/www
+            - [ find, /var/www, -type, d, -exec, chmod, 2775, {}, \; ]
+            - [ find, /var/www, -type, f, -exec, chmod, 0664, {}, \; ]
+    Properties:
+      KeyName:
+        Ref: KeyPair
+      InstanceType: t2.micro
+      SecurityGroups:
+      - Ref: EC2SecurityGroup
+      ImageId:
+        Fn::FindInMap:
+        - RegionMap
+        - Ref: AWS::Region
+        - AMALINUX
+      UserData:
+        Fn::Base64:
+          !Sub |
+            #!/bin/bash -xe
+            yum -y update
+            # Ensure AWS CFN Bootstrap is the latest
+            yum install -y aws-cfn-bootstrap
+            # Install the files and packages from the metadata
+            /opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --resource LaunchConfiguration --configsets configuration --region ${AWS::Region}
+            #/opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource AutoScalingGroup --region ${AWS::Region}
+  ALBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: ALB Security Group
+      VpcId:
+        Ref: VpcId
+      SecurityGroupIngress:
+      - IpProtocol: tcp
+        FromPort: 80
+        ToPort: 80
+        CidrIp: 0.0.0.0/0
+  EC2SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: EC2 Security Group
+      VpcId:
+        Ref: VpcId
+  EC2InboundRule:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      IpProtocol: tcp
+      FromPort: 80
+      ToPort: 80
+      SourceSecurityGroupId:
+        Fn::GetAtt:
+        - ALBSecurityGroup
+        - GroupId
+      GroupId:
+        Fn::GetAtt:
+        - EC2SecurityGroup
+        - GroupId
+Outputs:
+  WebDNSName:
+    Description: Public IP of the Load Balancer
+    Value:
+      Fn::Sub: http://${LoadBalancer.DNSName}

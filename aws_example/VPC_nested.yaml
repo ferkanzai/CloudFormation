@@ -1,0 +1,260 @@
+# This temaplate creates a VPC in the region with 6 subnets, 2 public (web tier) and 4 privates (app + data tier) 
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'VPC'
+
+Parameters:
+  VpcCIDR:
+    Description: Please enter the IP range (CIDR notation) for this VPC
+    Type: String
+    Default: 10.0.0.0/16
+  PublicSubnetACIDR:
+    Description: Please enter the IP range (CIDR notation) for the public subnet in the first Availability Zone
+    Type: String
+    Default: 10.0.1.0/24
+  PublicSubnetBCIDR:
+    Description: Please enter the IP range (CIDR notation) for the public subnet in the second Availability Zone
+    Type: String
+    Default: 10.0.2.0/24
+  PrivateSubnetAppACIDR:
+    Description: Please enter the IP range (CIDR notation) for the app private subnet in the first Availability Zone
+    Type: String
+    Default: 10.0.11.0/24
+  PrivateSubnetAppBCIDR:
+    Description: Please enter the IP range (CIDR notation) for the app private subnet in the second Availability Zone
+    Type: String
+    Default: 10.0.12.0/24
+  PrivateSubnetDataACIDR:
+    Description: Please enter the IP range (CIDR notation) for the data private subnet in the first Availability Zone
+    Type: String
+    Default: 10.0.21.0/24
+  PrivateSubnetDataBCIDR:
+    Description: Please enter the IP range (CIDR notation) for the data private subnet in the second Availability Zone
+    Type: String
+    Default: 10.0.22.0/24
+
+Resources:
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref VpcCIDR
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: WebVPC
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+      - Key: Name
+        Value: webIGw
+  AttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId:
+        Ref: VPC
+      InternetGatewayId:
+        Ref: InternetGateway
+  EIPA:
+    DependsOn: AttachGateway
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+  EIPB:
+    DependsOn: AttachGateway
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+  NATGatewayA:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt EIPA.AllocationId
+      SubnetId: !Ref PublicSubnetA
+  NATGatewayB:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt EIPB.AllocationId
+      SubnetId: !Ref PublicSubnetB
+  PublicSubnetA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: !Select
+        - 0
+        - Fn::GetAZs: !Ref "AWS::Region"
+      VpcId: !Ref VPC
+      CidrBlock: !Ref PublicSubnetACIDR
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Join
+          - '-'
+          - - PublicSubnet
+            - !Select
+              - 0
+              - Fn::GetAZs: !Ref "AWS::Region"
+  RouteAssocPubA:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnetA
+      RouteTableId: !Ref PublicRouteTable
+  PublicSubnetB:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: !Select
+        - 1
+        - Fn::GetAZs: !Ref "AWS::Region"
+      VpcId: !Ref VPC
+      CidrBlock: !Ref PublicSubnetBCIDR
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Join
+          - '-'
+          - - PublicSubnet
+            - !Select
+              - 1
+              - Fn::GetAZs: !Ref "AWS::Region"
+  RouteAssocPubB:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnetB
+      RouteTableId: !Ref PublicRouteTable
+  PrivateSubnetAppA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: !Select
+        - 0
+        - Fn::GetAZs: !Ref "AWS::Region"
+      VpcId: !Ref VPC
+      CidrBlock: !Ref PrivateSubnetAppACIDR
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Join
+          - '-'
+          - - PrivateSubnetApp
+            - !Select
+              - 0
+              - Fn::GetAZs: !Ref "AWS::Region"
+  RouteAssocPrivAppA:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnetAppA
+      RouteTableId: !Ref PrivateRouteTableA
+  PrivateSubnetAppB:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: !Select
+        - 1
+        - Fn::GetAZs: !Ref "AWS::Region"
+      VpcId: !Ref VPC
+      CidrBlock: !Ref PrivateSubnetAppBCIDR
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Join
+          - '-'
+          - - PrivateSubnetApp
+            - !Select
+              - 1
+              - Fn::GetAZs: !Ref "AWS::Region"
+  RouteAssocPrivAppB:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnetAppB
+      RouteTableId: !Ref PrivateRouteTableB
+  PrivateSubnetDataA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: !Select
+        - 0
+        - Fn::GetAZs: !Ref "AWS::Region"
+      VpcId: !Ref VPC
+      CidrBlock: !Ref PrivateSubnetDataACIDR
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Join
+          - '-'
+          - - PrivateSubnetData
+            - !Select
+              - 0
+              - Fn::GetAZs: !Ref "AWS::Region"
+  RouteAssocPrivDataA:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnetDataA
+      RouteTableId: !Ref PrivateRouteTableA
+  PrivateSubnetDataB:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: !Select
+        - 1
+        - Fn::GetAZs: !Ref "AWS::Region"
+      VpcId: !Ref VPC
+      CidrBlock: !Ref PrivateSubnetDataBCIDR
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Join
+          - '-'
+          - - PrivateSubnetData
+            - !Select
+              - 1
+              - Fn::GetAZs: !Ref "AWS::Region"
+  RouteAssocPrivDataB:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnetDataB
+      RouteTableId: !Ref PrivateRouteTableB
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+  PublicRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+  PrivateRouteTableA:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+  PrivateRouteA:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTableA
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NATGatewayA
+  PrivateRouteTableB:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+  PrivateRouteB:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTableB
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NATGatewayB
+
+Outputs:
+  VpcID:
+    Description: VPC ID created
+    Value: !Ref VPC
+  VPCStackName:
+    Description: Stack Name
+    Value: !Sub ${AWS::StackName}
+  PrivateSubnetAppA:
+    Description: Private subnet A app ID
+    Value: !Ref PrivateSubnetAppA
+  PrivateSubnetAppB:
+    Description: Private subnet B app ID 
+    Value: !Ref PrivateSubnetAppB
+  PublicSubnetA:
+    Description: Public subnet A ID
+    Value: !Ref PublicSubnetA
+  PublicSubnetB:
+    Description: Public subnet B ID
+    Value: !Ref PublicSubnetB
