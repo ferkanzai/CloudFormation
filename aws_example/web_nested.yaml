@@ -234,14 +234,14 @@ Resources:
                 <title>ALB test</title>
                 <body>
                 <center>
-                <h1>
-                <?php print "Hello world Fernando was here!"; ?> <br>
-                </h1>
+                <h3>
+                <?php print "Hello world and welcome to AWS Shannon building!"; ?> <br>
+                </h3>
                 </center>
                 <center>
-                <h2>
+                <h1 style="color:red">
                 <?php $eip = file_get_contents('http://169.254.169.254/latest/meta-data/instance-id'); echo $eip; ?>
-                </h2>
+                </h1>
                 </center>
                 </body>
                 </html>
